@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // or SUPABASE_URL if you renamed
+}
+
+model Summary {
+  id          String   @id @default(uuid())
+  blogUrl     String
+  summary     String
+  summaryUrdu String
+  createdAt   DateTime @default(now())
+}

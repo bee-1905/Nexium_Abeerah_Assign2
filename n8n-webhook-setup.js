@@ -1,10 +1,11 @@
-// ✅ Day 8 - Blog Scraper with Webhook + got
-// Install with: npm install got@11 cheerio express cors
+// ✅ Day 10 - Blog Scraper with Webhook + got + Prisma
+// Install with: npm install got@11 cheerio express cors @prisma/client
 
 const express = require('express');
 const got = require('got'); // ✅ correct got v11 import
 const cheerio = require('cheerio');
 const cors = require('cors');
+const prisma = require('./prismaClient'); // ✅ Import Prisma
 
 const app = express();
 const PORT = 3000;
@@ -76,10 +77,20 @@ app.post('/webhook/summarise', async (req, res) => {
       })
       .join(' ');
 
+    // ✅ Save to PostgreSQL (Supabase) via Prisma
+    const saved = await prisma.summary.create({
+      data: {
+        blogUrl,
+        summary,
+        summaryUrdu
+      }
+    });
+
     res.json({
       blogTextPreview: blogText.slice(0, 300) + "...",
       summary,
-      summaryUrdu
+      summaryUrdu,
+      savedToDb: saved.id
     });
 
   } catch (err) {
@@ -88,7 +99,14 @@ app.post('/webhook/summarise', async (req, res) => {
   }
 });
 
-// ✅ Start the server OUTSIDE the route
+app.get('/summaries', async (req, res) => {
+  const all = await prisma.summary.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(all);
+});
+
+// ✅ Start the server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
