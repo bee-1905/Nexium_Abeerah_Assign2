@@ -1,11 +1,14 @@
-// ✅ Day 10 - Blog Scraper with Webhook + got + Prisma
-// Install with: npm install got@11 cheerio express cors @prisma/client
+// ✅ Day 11 - Blog Scraper with MongoDB (Mongoose) + PostgreSQL (Prisma)
 
 const express = require('express');
-const got = require('got'); // ✅ correct got v11 import
+const got = require('got'); // ✅ got@11
 const cheerio = require('cheerio');
 const cors = require('cors');
-const prisma = require('./prismaClient'); // ✅ Import Prisma
+const prisma = require('./prismaClient'); // ✅ Prisma client
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+const FullBlog = require('./models/FullBlog'); // ✅ Mongoose model
 
 const app = express();
 const PORT = 3000;
@@ -13,7 +16,14 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-// Webhook endpoint to receive POST request with blogUrl
+// ✅ Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
+
+// ✅ POST Webhook: Scrape, summarise, translate, save to both databases
 app.post('/webhook/summarise', async (req, res) => {
   const { blogUrl } = req.body;
 
@@ -31,7 +41,6 @@ app.post('/webhook/summarise', async (req, res) => {
 
     const $ = cheerio.load(response.body);
 
-    // Extract main content
     let blogText =
       $('article').text().trim() ||
       $('div.post-content').text().trim() ||
@@ -42,33 +51,17 @@ app.post('/webhook/summarise', async (req, res) => {
       throw new Error('No readable content found on page.');
     }
 
-    // ✅ Simulate summary: grab first 2 sentences
+    // ✅ Summary logic
     const sentences = blogText.split(/(?<=[.?!])\s+/);
     const summary = sentences.slice(0, 2).join(' ');
 
-    // ✅ Urdu dictionary for translation
     const urduDictionary = {
-      "the": "یہ",
-      "world": "دنیا",
-      "as": "جیسے",
-      "we": "ہم",
-      "have": "رکھا ہے",
-      "created": "بنائی",
-      "it": "یہ",
-      "is": "ہے",
-      "a": "ایک",
-      "process": "عمل",
-      "of": "کا",
-      "our": "ہماری",
-      "thinking": "سوچ",
-      "cannot": "نہیں سکتا",
-      "be": "ہونا",
-      "changed": "بدلا",
-      "without": "کے بغیر",
-      "changing": "بدلنا"
+      "the": "یہ", "world": "دنیا", "as": "جیسے", "we": "ہم", "have": "رکھا ہے",
+      "created": "بنائی", "it": "یہ", "is": "ہے", "a": "ایک", "process": "عمل",
+      "of": "کا", "our": "ہماری", "thinking": "سوچ", "cannot": "نہیں سکتا",
+      "be": "ہونا", "changed": "بدلا", "without": "کے بغیر", "changing": "بدلنا"
     };
 
-    // ✅ Translate summary word by word
     const summaryUrdu = summary
       .split(/\s+/)
       .map(word => {
@@ -77,13 +70,13 @@ app.post('/webhook/summarise', async (req, res) => {
       })
       .join(' ');
 
-    // ✅ Save to PostgreSQL (Supabase) via Prisma
+    // ✅ Save full content to MongoDB
+    const fullBlog = new FullBlog({ blogUrl, fullContent: blogText });
+    await fullBlog.save();
+
+    // ✅ Save summary to PostgreSQL (Supabase) using Prisma
     const saved = await prisma.summary.create({
-      data: {
-        blogUrl,
-        summary,
-        summaryUrdu
-      }
+      data: { blogUrl, summary, summaryUrdu }
     });
 
     res.json({
@@ -99,6 +92,7 @@ app.post('/webhook/summarise', async (req, res) => {
   }
 });
 
+// ✅ GET all summaries from PostgreSQL
 app.get('/summaries', async (req, res) => {
   const all = await prisma.summary.findMany({
     orderBy: { createdAt: 'desc' }
@@ -106,7 +100,19 @@ app.get('/summaries', async (req, res) => {
   res.json(all);
 });
 
-// ✅ Start the server
+// ✅ Optional: GET all full blogs from MongoDB
+app.get('/fullblogs', async (req, res) => {
+  const blogs = await FullBlog.find().sort({ createdAt: -1 });
+  res.json(blogs);
+});
+
+// ✅ Optional: DELETE blog from MongoDB
+app.delete('/fullblogs/:id', async (req, res) => {
+  await FullBlog.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Blog deleted' });
+});
+
+// ✅ Start Server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
