@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Blog Summarizer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      font-weight: bold;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.7rem 1.5rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .output {
+      margin-top: 2rem;
+    }
+    .output h3 {
+      margin-bottom: 0.5rem;
+      color: #222;
+    }
+    .output p {
+      background: #e8f0fe;
+      padding: 1rem;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📰 Blog Summarizer & Translator</h1>
+    <label for="blogUrl">Enter Blog URL:</label>
+    <input type="text" id="blogUrl" placeholder="https://example.com/blog-post" />
+    <button onclick="summariseBlog()">Summarise</button>
+
+    <div class="output" id="result" style="display:none;">
+      <h3>Blog Preview:</h3>
+      <p id="preview"></p>
+
+      <h3>Summary (English):</h3>
+      <p id="summaryEn"></p>
+
+      <h3>Summary (Urdu):</h3>
+      <p id="summaryUr"></p>
+    </div>
+  </div>
+
+  <script>
+    async function summariseBlog() {
+      const blogUrl = document.getElementById("blogUrl").value.trim();
+      if (!blogUrl) {
+        alert("Please enter a blog URL.");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:3000/webhook/summarise", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blogUrl })
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch summary");
+
+        const data = await response.json();
+
+        document.getElementById("result").style.display = "block";
+        document.getElementById("preview").textContent = data.blogTextPreview || "No preview.";
+        document.getElementById("summaryEn").textContent = data.summary || "No summary.";
+        document.getElementById("summaryUr").textContent = data.summaryUrdu || "No Urdu summary.";
+
+      } catch (error) {
+        console.error("Error:", error);
+        alert("Something went wrong while fetching the summary.");
+      }
+    }
+  </script>
+</body>
+</html>
