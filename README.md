@@ -16,7 +16,7 @@ This is a full-stack backend project that scrapes blog content from a URL, gener
 - **MongoDB** with Mongoose (for storing full blog content)
 - **PostgreSQL** with Prisma (for storing summaries)
 - **Environment variables** via `.env`
-
+-- **Vercel: https://blogscraper-kappa.vercel.app/
 ---
 
 ## 📦 Installation
